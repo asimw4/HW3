@@ -1,0 +1,182 @@
+---
+title: "HW3"
+author: "Asim Waheed"
+date: "2024-02-03"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+creatinine <- read.csv("C:/Users/asimw/Downloads/creatinine.csv")
+marketmodel <- read.csv("C:/Users/asimw/Downloads/marketmodel.csv")
+covid <- read.csv("C:/Users/asimw/Downloads/covid.csv")
+milk <- read.csv("C:/Users/asimw/Downloads/milk.csv")
+library(dplyr)
+library(ggplot2)
+library(broom)
+library(tidyverse)
+```
+
+***Problem 1 Part A***
+
+```{r, echo=FALSE}
+# Fit a linear model
+model <- lm(creatclear ~ age, data=creatinine)
+
+# Predict the creatinine clearance rate for a 55-year-old
+predicted_55 <- predict(model, newdata=data.frame(age=55))
+
+predicted_55
+```
+
+***The expected creatinine clearance rate for a 55-year-old was calculated by plugging 55 in to the regression equation(y = B0 + B1 X age), in which y is the predicted clearance rate, B0 is the intercept, and B1 is the coefficient. Using this equation the model calculated the expected clearance rate to be 113.723. ***
+
+***Problem 1 Part B***
+
+```{r, echo=FALSE}
+slope <- coef(model)["age"]
+
+slope
+```
+
+***We can determine how creatine clearence changes with age, simply by looking at the slope, represented by the coefficient, B1. In this case the slope or coefficient is around -0.62, meaning that if age went up by one year in the model then we can expect, on average, the creatinine rate to go down by about -0.62.***
+
+***Problem 1 Part C***
+
+```{r, echo=FALSE}
+# Predict the expected rate for a 40 and 60-year-old
+predicted_40 <- predict(model, newdata=data.frame(age=40))
+predicted_60 <- predict(model, newdata=data.frame(age=60))
+
+# Compare the actual rate to the expected rate
+healthier_40 <- 135 - predicted_40
+healthier_60 <- 112 - predicted_60
+
+healthier_40
+healthier_60
+```
+
+***To find whether the 40 or 60 year old is healthier, we simply need to calculate the expcted creatinine rate for both of them and subtract them from the actual creatinine rates. After doing this we can see that the 40 year old has an actual creatinine rate of around 11.98 higher than expected, compared to the 60 year old having an actual creatinine rate of about 1.38 higher than expected, indicating the 40 year has a healthier rate.***
+
+***Problem 2 Introduction***
+
+***The "beta" of a stock refers to in basic terms the overall systematic risk of a certain stock. In a statistical sense, beta is simply the slope of the price of the stock relative to how the market changes. The beta of a stock can be found/calculated by looking at the coefficient. This leads to the underlying connection between the beta of a stock and the regression model. The regression model follows the formula of Yt^k = B0^k + B1^kXt + et^k. In this equation B1^k is the slope term and in turn what represents the beta of a stock. It measures the relation between the return on the stock to the return on the market. A B1^k(beta) above 1 dictates a higher systematic risk and coincides more with the "high risk high reward" phrase as the return on the stock will increase more as the market goes up as well as decrease more as the market goes down. A B1^k(beta) under 1 follows the opposite idea as the return on the stock will increase less as the market goes up as well as decrease less when the stock goes down, representing more of a safe option.***
+
+***Problem 2 Table***
+
+```{r, echo=FALSE}
+# List of individual stocks
+stocks <- c("AAPL", "GOOG", "MRK", "JNJ", "WMT", "TGT")
+
+# Initialize an empty data frame to store results
+regression_results <- data.frame(Ticker = character(),
+                                 Intercept = numeric(),
+                                 Slope = numeric(),
+                                 Rsquared = numeric(),
+                                 stringsAsFactors = FALSE)
+
+# Loop through each stock and perform regression against SPY
+for(stock in stocks) {
+  # Perform the regression
+  model <- lm(formula(paste(stock, "~ SPY")), data = marketmodel)
+  
+  # Get the summary
+  model_summary <- summary(model)
+  
+  # Extract the results
+  intercept <- model_summary$coefficients["(Intercept)", "Estimate"]
+  slope <- model_summary$coefficients["SPY", "Estimate"]
+  rsquared <- model_summary$r.squared
+  
+  # Append to the results data frame
+  regression_results <- rbind(regression_results, data.frame(Ticker = stock,
+                                                             Intercept = intercept,
+                                                             Slope = slope,
+                                                             Rsquared = rsquared))
+}
+
+# Print the results table
+regression_results
+```
+
+***This table presents the alpha (intercept), beta (slope), and R-squared values from linear regressions of daily returns for six individual stocks against the S&P 500 daily returns, spanning from the beginning of 2019.***
+
+***Problem 2 Conclusion***
+
+***From the table we can conclude that the stock with the lowest systematic risk is WMT since its beta(slope) is the lowest being around 0.52. We are also able to conclude that the stock with the highest systematic risk is AAPL as it's the stock with the highest beta(slope) and the only stock with a beta over 1, being around 1.07.***
+
+***Problem 3***
+
+```{r, echo=FALSE}
+# Filter the data to remove rows with zero deaths to avoid log transformation issues
+covid <- covid %>% filter(deaths > 0)
+
+# Fit linear models on the log of deaths
+italy_model <- lm(log(deaths) ~ days_since_first_death, 
+                  data = covid %>% filter(country == 'Italy'))
+spain_model <- lm(log(deaths) ~ days_since_first_death, 
+                  data = covid %>% filter(country == 'Spain'))
+```
+
+```{r, echo=FALSE}
+# Get growth rates for Italy and Spain
+italy_growth_rate <- coef(italy_model)["days_since_first_death"]
+italy_growth_rate_rounded <- round(exp(italy_growth_rate), 3)
+
+spain_growth_rate <- coef(spain_model)["days_since_first_death"]
+spain_growth_rate_rounded <- round(exp(spain_growth_rate), 3)
+
+italy_growth_rate_rounded
+spain_growth_rate_rounded
+```
+
+```{r, echo=FALSE}
+# Calculate doubling times for Italy and Spain
+italy_doubling_time <- log(2) / italy_growth_rate
+italy_doubling_time_rounded <- round(italy_doubling_time)
+
+spain_doubling_time <- log(2) / spain_growth_rate
+spain_doubling_time_rounded <- round(spain_doubling_time)
+
+
+italy_doubling_time_rounded
+spain_doubling_time_rounded
+```
+
+***Based on the results given by the model, Italy has a growth rate of about 20.1% and Spain has a growth rate of about 31.8%. Italy has a doubling time of 4 days, compared to 3 days for Spain.***
+
+```{r, echo=FALSE}
+# Line graph showing reported daily deaths over time 
+ggplot(covid, aes(x = days_since_first_death, y = deaths, color = country)) +
+  geom_line() +
+  labs(title = "Reported COVID-19 Daily Deaths Over Time",
+       x = "Days Since First Death",
+       y = "Reported Daily Deaths") +
+  scale_color_manual(values = c('Italy' = 'red', 'Spain' = 'blue'))
+```
+
+***Problem 4***
+
+```{r, echo=FALSE}
+# Log-transform both the sales (Q) and price (P) for linearization
+milk_data <- milk %>%
+  mutate(log_sales = log(sales),
+         log_price = log(price))
+
+# Fit the linear model on the log-transformed data
+model <- lm(log_sales ~ log_price, data = milk_data)
+
+# Extract the estimated price elasticity of demand (beta parameter)
+estimated_beta <- coef(model)['log_price']
+
+estimated_beta
+```
+
+***The price elasticity of the demand for milk is around -1.619. This was calculated by applying a power-law model to sales data across varying prices. This was achieved through a log-log linear regression, which suggests that the demand for milk is elastic. The number -1.619 effectively means that a 1% increase in the price of milk leads to a 1.619% decrease in the quantity demanded for milk.***
+
+
+
+  
+  
